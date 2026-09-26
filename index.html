@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Linx · Réveil du serveur</title>
+<!--
+  Écran d'attente pour le réveil d'un service Render gratuit (26/09/2026).
+
+  POURQUOI CE FICHIER EXISTE
+  --------------------------
+  Render ne sert PAS de page d'attente à sa marque pendant le réveil d'un
+  Free Web Service endormi : la première requête après une période
+  d'inactivité reste simplement EN ATTENTE côté navigateur (30 à 60
+  secondes), sans rien afficher tant que l'application n'a pas répondu —
+  ce que l'utilisateur voit alors dépend de son navigateur (onglet qui
+  tourne, page blanche), pas d'un écran Render à remplacer : il n'y a rien
+  à intercepter côté Render lui-même.
+
+  Ce fichier est donc une page STATIQUE, hébergée ici via GitHub Pages
+  (toujours disponible, contrairement à Render en veille) : le personnel
+  du laboratoire ouvre CETTE page en premier, elle affiche l'écran de
+  marque Linx pendant qu'elle attend elle-même que le service Render
+  réponde, puis redirige automatiquement vers l'application réelle dès
+  que c'est le cas — jamais de page blanche, jamais de "Not Found" Render
+  pendant le réveil.
+
+  Reprend tel quel le composant de chargement de marque
+  (LOGO LINX V5 final/pack/loader/linx-lab-loading-page.html) plutôt que
+  d'en redessiner un autre : même identité visuelle que le reste de la
+  suite.
+
+  CONFIGURATION
+  -------------
+  Modifier `CIBLE_PAR_DEFAUT` ci-dessous pour l'établissement servi par
+  cette page, ou passer l'URL cible en paramètre : cette-page.html?cible=
+  https://linx-lab.onrender.com — utile pour réutiliser LE MÊME fichier
+  pour plusieurs établissements/applications sans le dupliquer.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0a0d12; --ink:#eef1f6; --ink-dim:#c3ccdc;
+    --gold:#e7b257; --gold-2:#f1c069;
+    --indigo:#8992e6; --indigo-2:#a7b0f6;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{ height:100%; }
+  body{
+    background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',sans-serif;
+    min-height:100vh; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  #linx-loader{
+    position:fixed; inset:0; z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:22px;
+    background:
+      radial-gradient(ellipse 900px 600px at 50% 40%, #141b26 0%, transparent 70%),
+      radial-gradient(ellipse 1200px 900px at 50% 100%, #0d1219 0%, #05070a 60%);
+    transition:opacity .45s ease, visibility .45s ease;
+  }
+  #linx-loader.is-hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+
+  #linx-loader .mark{ width:84px; height:84px; }
+  #linx-loader .ring{ fill:none; stroke-width:6.4; stroke-linecap:round; transform-origin:center; }
+  #linx-loader .ring--gold{ stroke:var(--gold); stroke-dasharray:56 32; animation:spinCW 2.6s linear infinite; }
+  #linx-loader .ring--indigo{ stroke:var(--indigo); stroke-dasharray:56 32; animation:spinCCW 2.6s linear infinite; }
+  #linx-loader .lens{ fill:#c7bdf7; animation:pulseLens 1.8s ease-in-out infinite; }
+  #linx-loader .link{ stroke:url(#linx-loader-grad); stroke-width:3.4; stroke-linecap:round; stroke-dasharray:3.4 6.6; animation:flowLink .85s linear infinite; }
+  #linx-loader .node{ animation:pulseNode 1.8s ease-in-out infinite; }
+  #linx-loader .node--right{ animation-delay:.9s; }
+
+  @keyframes spinCW   { to { transform:rotate(360deg); } }
+  @keyframes spinCCW  { to { transform:rotate(-360deg); } }
+  @keyframes flowLink { to { stroke-dashoffset:-30; } }
+  @keyframes pulseLens{ 0%,100%{ opacity:.18; } 50%{ opacity:.42; } }
+  @keyframes pulseNode{ 0%,100%{ r:5; } 50%{ r:7.6; } }
+
+  #linx-loader .status{ text-align:center; }
+  #linx-loader .status .name{
+    font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:26px;
+    letter-spacing:-0.4px; color:var(--ink);
+  }
+  #linx-loader .status .msg{
+    margin-top:6px; font-size:13px; color:var(--ink-dim); letter-spacing:.2px; font-weight:500;
+  }
+  #linx-loader .status .msg::after{
+    content:''; display:inline-block; width:1ch; text-align:left;
+    animation:dots 1.4s steps(4,end) infinite;
+  }
+  @keyframes dots{ 0%{content:'';} 25%{content:'.';} 50%{content:'..';} 75%{content:'...';} 100%{content:'';} }
+
+  /* Barre de progression indicative — le VRAI état est binaire (le
+     serveur a répondu ou pas), cette barre ne fait qu'occuper l'attente
+     sans jamais prétendre connaître un pourcentage réel. */
+  #linx-loader .progress{
+    width:220px; height:4px; border-radius:4px; overflow:hidden;
+    background:rgba(255,255,255,.08); margin-top:4px;
+  }
+  #linx-loader .progress-bar{
+    height:100%; width:8%; border-radius:4px;
+    background:linear-gradient(90deg, var(--gold), var(--indigo));
+    transition:width 3s ease;
+  }
+
+  #linx-loader .retry{
+    margin-top:6px; font-size:12.5px; color:var(--ink-dim);
+    text-align:center; max-width:320px; display:none;
+  }
+  #linx-loader .retry a{ color:var(--gold-2); text-decoration:underline; }
+
+  @media (prefers-reduced-motion: reduce){
+    #linx-loader .ring, #linx-loader .lens, #linx-loader .link, #linx-loader .node{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div id="linx-loader" role="status" aria-live="polite">
+    <svg class="mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="linx-loader-grad" x1="10" y1="32" x2="54" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#f1c069"/>
+          <stop offset="1" stop-color="#96a0f2"/>
+        </linearGradient>
+        <clipPath id="linx-loader-clip"><circle cx="24" cy="32" r="14"/></clipPath>
+      </defs>
+      <line class="link" x1="10" y1="32" x2="54" y2="32"/>
+      <g clip-path="url(#linx-loader-clip)"><circle class="lens" cx="40" cy="32" r="14"/></g>
+      <circle class="ring ring--gold"    cx="24" cy="32" r="14"/>
+      <circle class="ring ring--indigo"  cx="40" cy="32" r="14"/>
+      <circle class="node node--left"  cx="10" cy="32" r="5" fill="#f1c069"/>
+      <circle class="node node--right" cx="54" cy="32" r="5" fill="#96a0f2"/>
+    </svg>
+    <div class="status">
+      <div class="name">Linx</div>
+      <div class="msg" id="linx-loader-msg">Réveil du serveur</div>
+    </div>
+    <div class="progress"><div class="progress-bar" id="linx-loader-bar"></div></div>
+    <div class="retry" id="linx-loader-retry">
+      Ça prend plus longtemps que prévu.
+      <a href="#" id="linx-loader-retry-link">Réessayer</a>
+      ou <a href="#" id="linx-loader-retry-direct">continuer directement</a>.
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ------------------------------------------------------------------
+  // Configuration : un seul fichier réutilisable pour plusieurs cibles.
+  // ------------------------------------------------------------------
+  const CIBLE_PAR_DEFAUT = "https://linx-lab.onrender.com/";
+
+  const params = new URLSearchParams(location.search);
+  const cible = params.get("cible") || CIBLE_PAR_DEFAUT;
+
+  let base;
+  try {
+    base = new URL(cible);
+  } catch (e) {
+    base = new URL(CIBLE_PAR_DEFAUT);
+  }
+  const urlSante = new URL("/healthz", base.origin).toString();
+
+  const msg = document.getElementById("linx-loader-msg");
+  const bar = document.getElementById("linx-loader-bar");
+  const retry = document.getElementById("linx-loader-retry");
+  const retryLink = document.getElementById("linx-loader-retry-link");
+  const retryDirect = document.getElementById("linx-loader-retry-direct");
+
+  const ETAPES = [
+    [0,  "Réveil du serveur"],
+    [8,  "Connexion à la base de données"],
+    [25, "Ça peut prendre jusqu'à une minute"],
+    [45, "Toujours en cours, merci de patienter"],
+  ];
+  const PROGRES = [10, 35, 60, 80, 92];
+
+  let annule = false;
+
+  function afficherEtape(secondesEcoulees) {
+    for (const [seuil, texte] of ETAPES) {
+      if (secondesEcoulees >= seuil) msg.textContent = texte;
+    }
+    const i = Math.min(Math.floor(secondesEcoulees / 4), PROGRES.length - 1);
+    bar.style.width = PROGRES[i] + "%";
+  }
+
+  function redirigerVers(url) {
+    location.href = url;
+  }
+
+  async function verifierUneFois() {
+    try {
+      // no-cors : /healthz n'a aucune raison d'autoriser un CORS
+      // cross-origin (ce n'est pas une API publique) — en mode no-cors,
+      // la promesse se résout dès qu'une réponse arrive, opaque ou non,
+      // ce qui suffit ici : on ne veut savoir qu'une chose, "le serveur
+      // répond-il enfin ?", jamais lire le corps de la réponse.
+      await fetch(urlSante, { mode: "no-cors", cache: "no-store" });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function attendreReveil() {
+    const debut = Date.now();
+    const LIMITE_SECONDES = 90;
+
+    while (!annule) {
+      const secondes = (Date.now() - debut) / 1000;
+      afficherEtape(secondes);
+
+      if (secondes > LIMITE_SECONDES) {
+        retry.style.display = "block";
+        msg.textContent = "Le serveur met plus de temps que d'habitude";
+        return;
+      }
+
+      if (await verifierUneFois()) {
+        bar.style.width = "100%";
+        msg.textContent = "Serveur prêt — redirection";
+        setTimeout(() => redirigerVers(cible), 400);
+        return;
+      }
+
+      await new Promise(r => setTimeout(r, 2500));
+    }
+  }
+
+  retryLink.addEventListener("click", (e) => {
+    e.preventDefault();
+    retry.style.display = "none";
+    annule = false;
+    attendreReveil();
+  });
+  retryDirect.addEventListener("click", (e) => {
+    e.preventDefault();
+    redirigerVers(cible);
+  });
+
+  attendreReveil();
+})();
+</script>
+</body>
+</html>
