@@ -9,21 +9,26 @@
 
   POURQUOI CE FICHIER EXISTE
   --------------------------
-  Render ne sert PAS de page d'attente à sa marque pendant le réveil d'un
-  Free Web Service endormi : la première requête après une période
-  d'inactivité reste simplement EN ATTENTE côté navigateur (30 à 60
-  secondes), sans rien afficher tant que l'application n'a pas répondu —
-  ce que l'utilisateur voit alors dépend de son navigateur (onglet qui
-  tourne, page blanche), pas d'un écran Render à remplacer : il n'y a rien
-  à intercepter côté Render lui-même.
+  CORRECTION DU 27/09/2026 : Render sert bel et bien SA PROPRE page de
+  réveil à sa marque (HTML, statut 200, sur toutes les routes) tant que
+  le conteneur d'un Free Web Service endormi démarre — confirmé par
+  observation directe, contrairement à l'hypothèse retenue le 26/09/2026
+  (qui supposait la requête simplement en attente, sans rien afficher).
+  Cette page Render se recharge seule mais reste à sa marque à elle, pas
+  celle du laboratoire — et un premier essai de détection en mode
+  "no-cors" (voir historique git) se laissait tromper par CETTE page : la
+  réponse opaque du mode no-cors ne permet pas de la distinguer d'une
+  vraie réponse applicative, la redirection partait donc trop tôt, droit
+  sur l'écran Render.
 
-  Ce fichier est donc une page STATIQUE, hébergée ici via GitHub Pages
+  Ce fichier est une page STATIQUE, hébergée ici via GitHub Pages
   (toujours disponible, contrairement à Render en veille) : le personnel
   du laboratoire ouvre CETTE page en premier, elle affiche l'écran de
   marque Linx pendant qu'elle attend elle-même que le service Render
-  réponde, puis redirige automatiquement vers l'application réelle dès
-  que c'est le cas — jamais de page blanche, jamais de "Not Found" Render
-  pendant le réveil.
+  réponde — en lisant vraiment le corps JSON de /healthz (CORS ouvert
+  côté Lab, voir _LINX_LAB/app.py) pour s'assurer que c'est l'application
+  qui répond, pas la page d'attente Render — puis redirige automatiquement
+  vers l'application réelle une fois confirmé.
 
   Reprend tel quel le composant de chargement de marque
   (LOGO LINX V5 final/pack/loader/linx-lab-loading-page.html) plutôt que
@@ -195,15 +200,23 @@
   }
 
   async function verifierUneFois() {
+    // TROUVAILLE DU 27/09/2026 — Render sert bien sa PROPRE page de
+    // réveil (HTML, statut 200) sur TOUTES les routes tant que le
+    // conteneur démarre, /healthz compris. Un fetch en mode "no-cors" ne
+    // pouvant jamais lire ni le statut ni le corps de la réponse (réponse
+    // opaque par construction), il se résolvait dès CETTE page Render —
+    // pas celle de l'application — et redirigeait trop tôt, droit dessus.
+    // /healthz répond désormais avec un en-tête CORS ouvert
+    // (Access-Control-Allow-Origin, voir _LINX_LAB/app.py) : on peut donc
+    // lire le VRAI corps JSON, et ne considérer le serveur prêt que
+    // lorsque c'est bien LUI qui répond — jamais la page d'attente Render.
     try {
-      // no-cors : /healthz n'a aucune raison d'autoriser un CORS
-      // cross-origin (ce n'est pas une API publique) — en mode no-cors,
-      // la promesse se résout dès qu'une réponse arrive, opaque ou non,
-      // ce qui suffit ici : on ne veut savoir qu'une chose, "le serveur
-      // répond-il enfin ?", jamais lire le corps de la réponse.
-      await fetch(urlSante, { mode: "no-cors", cache: "no-store" });
-      return true;
+      const rep = await fetch(urlSante, { cache: "no-store" });
+      const donnees = await rep.json();
+      return typeof donnees === "object" && donnees !== null && "status" in donnees;
     } catch (e) {
+      // Réponse non-JSON (page HTML de Render) ou requête refusée :
+      // le serveur applicatif ne répond pas encore.
       return false;
     }
   }
