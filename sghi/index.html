@@ -3,24 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Linx · Réveil du serveur</title>
+<title>Linx SGHI · Réveil du serveur</title>
 <!--
-  Écran d'attente pour le réveil d'un service Render gratuit.
-
-  PAGE GÉNÉRIQUE — gardée pour compatibilité avec les raccourcis .url
-  déjà distribués (?cible=...). Pour un lien à donner aux utilisateurs,
-  préférer les pages courtes par application : lab/, med/, bill/, sghi/
-  (voir etablissements.py::ecrire_raccourcis_cloud à la racine de
-  LINX_SUITE, qui les génère).
-
-  Logique et style partagés dans assets/ — voir leur en-tête pour le
-  détail (pourquoi Render affiche sa propre page, pourquoi /healthz doit
-  répondre en CORS ouvert, etc.), plutôt que dupliqués dans chaque page.
+  Page courte de réveil pour Linx SGHI — Pharmacie, Magasin & Administration.
+  Générée depuis _generer_pages_par_app.py (LINX-Blueprint) ; logique et
+  style partagés dans ../assets/, ne rien dupliquer ici en cas de
+  correctif — modifier assets/reveil.js et régénérer si le gabarit
+  lui-même doit changer.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/reveil.css" />
+<link rel="stylesheet" href="../assets/reveil.css" />
 </head>
 <body>
 
@@ -41,7 +35,8 @@
       <circle class="node node--right" cx="54" cy="32" r="5" fill="#96a0f2"/>
     </svg>
     <div class="status">
-      <div class="name">Linx</div>
+      <div class="name">Linx · SGHI</div>
+      <div class="sous-titre">Pharmacie, Magasin & Administration</div>
       <div class="msg" id="linx-loader-msg">Réveil du serveur</div>
     </div>
     <div class="progress"><div class="progress-bar" id="linx-loader-bar"></div></div>
@@ -52,6 +47,7 @@
     </div>
   </div>
 
-  <script src="assets/reveil.js"></script>
+  <script>window.LINX_CIBLE = "https://linx-sghi.onrender.com/";</script>
+  <script src="../assets/reveil.js"></script>
 </body>
 </html>

@@ -1,0 +1,81 @@
+/* Style partagé de l'écran de réveil Linx (27/09/2026).
+   Une seule feuille pour toutes les pages (index, lab/, med/, bill/,
+   sghi/) — évite de corriger la même règle CSS à cinq endroits. */
+:root{
+  --bg:#0a0d12; --ink:#eef1f6; --ink-dim:#c3ccdc;
+  --gold:#e7b257; --gold-2:#f1c069;
+  --indigo:#8992e6; --indigo-2:#a7b0f6;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{ height:100%; }
+body{
+  background:var(--bg); color:var(--ink); font-family:'IBM Plex Sans',sans-serif;
+  min-height:100vh; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+}
+
+#linx-loader{
+  position:fixed; inset:0; z-index:9999;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:22px;
+  background:
+    radial-gradient(ellipse 900px 600px at 50% 40%, #141b26 0%, transparent 70%),
+    radial-gradient(ellipse 1200px 900px at 50% 100%, #0d1219 0%, #05070a 60%);
+  transition:opacity .45s ease, visibility .45s ease;
+}
+#linx-loader.is-hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+
+#linx-loader .mark{ width:84px; height:84px; }
+#linx-loader .ring{ fill:none; stroke-width:6.4; stroke-linecap:round; transform-origin:center; }
+#linx-loader .ring--gold{ stroke:var(--gold); stroke-dasharray:56 32; animation:spinCW 2.6s linear infinite; }
+#linx-loader .ring--indigo{ stroke:var(--indigo); stroke-dasharray:56 32; animation:spinCCW 2.6s linear infinite; }
+#linx-loader .lens{ fill:#c7bdf7; animation:pulseLens 1.8s ease-in-out infinite; }
+#linx-loader .link{ stroke:url(#linx-loader-grad); stroke-width:3.4; stroke-linecap:round; stroke-dasharray:3.4 6.6; animation:flowLink .85s linear infinite; }
+#linx-loader .node{ animation:pulseNode 1.8s ease-in-out infinite; }
+#linx-loader .node--right{ animation-delay:.9s; }
+
+@keyframes spinCW   { to { transform:rotate(360deg); } }
+@keyframes spinCCW  { to { transform:rotate(-360deg); } }
+@keyframes flowLink { to { stroke-dashoffset:-30; } }
+@keyframes pulseLens{ 0%,100%{ opacity:.18; } 50%{ opacity:.42; } }
+@keyframes pulseNode{ 0%,100%{ r:5; } 50%{ r:7.6; } }
+
+#linx-loader .status{ text-align:center; }
+#linx-loader .status .name{
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:26px;
+  letter-spacing:-0.4px; color:var(--ink);
+}
+#linx-loader .status .sous-titre{
+  margin-top:2px; font-size:12px; color:var(--ink-dim); letter-spacing:.3px;
+}
+#linx-loader .status .msg{
+  margin-top:6px; font-size:13px; color:var(--ink-dim); letter-spacing:.2px; font-weight:500;
+}
+#linx-loader .status .msg::after{
+  content:''; display:inline-block; width:1ch; text-align:left;
+  animation:dots 1.4s steps(4,end) infinite;
+}
+@keyframes dots{ 0%{content:'';} 25%{content:'.';} 50%{content:'..';} 75%{content:'...';} 100%{content:'';} }
+
+/* Barre de progression indicative — le VRAI état est binaire (le
+   serveur a répondu ou pas), cette barre ne fait qu'occuper l'attente
+   sans jamais prétendre connaître un pourcentage réel. */
+#linx-loader .progress{
+  width:220px; height:4px; border-radius:4px; overflow:hidden;
+  background:rgba(255,255,255,.08); margin-top:4px;
+}
+#linx-loader .progress-bar{
+  height:100%; width:8%; border-radius:4px;
+  background:linear-gradient(90deg, var(--gold), var(--indigo));
+  transition:width 3s ease;
+}
+
+#linx-loader .retry{
+  margin-top:6px; font-size:12.5px; color:var(--ink-dim);
+  text-align:center; max-width:320px; display:none;
+}
+#linx-loader .retry a{ color:var(--gold-2); text-decoration:underline; }
+
+@media (prefers-reduced-motion: reduce){
+  #linx-loader .ring, #linx-loader .lens, #linx-loader .link, #linx-loader .node{ animation:none !important; }
+}
