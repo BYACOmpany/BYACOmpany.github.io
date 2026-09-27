@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Linx SUPERADMIN · Réveil du serveur</title>
+<!--
+  Page courte de réveil pour la console Superadmin (linx-superadmin, le
+  profil OPÉRATEUR — pas linx-suite, qui ne sert que la vitrine publique
+  et n'a pas les routes d'administration, voir 404 vs 302 sur
+  /etablissements/ constaté le 27/09/2026).
+
+  Pour un lien profond (ex. /etablissements/ précisément), utiliser plutôt
+  la page générique avec ?cible=, qui préserve le chemin :
+    https://byacompany.github.io/?cible=https://linx-superadmin.onrender.com/etablissements/
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/reveil.css" />
+</head>
+<body>
+
+  <div id="linx-loader" role="status" aria-live="polite">
+    <svg class="mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="linx-loader-grad" x1="10" y1="32" x2="54" y2="32" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#f1c069"/>
+          <stop offset="1" stop-color="#96a0f2"/>
+        </linearGradient>
+        <clipPath id="linx-loader-clip"><circle cx="24" cy="32" r="14"/></clipPath>
+      </defs>
+      <line class="link" x1="10" y1="32" x2="54" y2="32"/>
+      <g clip-path="url(#linx-loader-clip)"><circle class="lens" cx="40" cy="32" r="14"/></g>
+      <circle class="ring ring--gold"    cx="24" cy="32" r="14"/>
+      <circle class="ring ring--indigo"  cx="40" cy="32" r="14"/>
+      <circle class="node node--left"  cx="10" cy="32" r="5" fill="#f1c069"/>
+      <circle class="node node--right" cx="54" cy="32" r="5" fill="#96a0f2"/>
+    </svg>
+    <div class="status">
+      <div class="name">Linx · SUPERADMIN</div>
+      <div class="sous-titre">Console opérateur</div>
+      <div class="msg" id="linx-loader-msg">Réveil du serveur</div>
+    </div>
+    <div class="progress"><div class="progress-bar" id="linx-loader-bar"></div></div>
+    <div class="retry" id="linx-loader-retry">
+      Ça prend plus longtemps que prévu.
+      <a href="#" id="linx-loader-retry-link">Réessayer</a>
+      ou <a href="#" id="linx-loader-retry-direct">continuer directement</a>.
+    </div>
+  </div>
+
+  <script>window.LINX_CIBLE = "https://linx-superadmin.onrender.com/";</script>
+  <script src="../assets/reveil.js"></script>
+</body>
+</html>
