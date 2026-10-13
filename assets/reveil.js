@@ -8,7 +8,32 @@
   const CIBLE_PAR_DEFAUT = "https://linx-lab.onrender.com/";
 
   const params = new URLSearchParams(location.search);
-  const cible = window.LINX_CIBLE || params.get("cible") || CIBLE_PAR_DEFAUT;
+  // REDIRECTION OUVERTE FERMÉE (audit du 13/10/2026). `?cible=` acceptait
+  // n'importe quelle adresse : un lien « byacompany.github.io/?cible=<site piège> »
+  // faisait afficher notre écran de réveil de confiance, puis envoyait la
+  // personne ailleurs. Seuls les services Linx connus sont acceptés ; toute
+  // autre valeur retombe sur le service par défaut. (Une adresse en
+  // `*.onrender.com` ne suffit pas : n'importe qui peut en créer une.)
+  const SERVICES_AUTORISES = new Set([
+    "linx-lab.onrender.com", "linx-med.onrender.com", "linx-bill.onrender.com",
+    "linx-sghi.onrender.com", "linx-suite.onrender.com", "linx-superadmin.onrender.com",
+    "linx-lab-mutualise.onrender.com", "linx-med-mutualise.onrender.com",
+    "linx-bill-mutualise.onrender.com", "linx-sghi-mutualise.onrender.com",
+    "linx-lab-la-grace.onrender.com", "linx-med-la-grace.onrender.com",
+    "linx-bill-la-grace.onrender.com", "linx-sghi-la-grace.onrender.com",
+  ]);
+  function cibleAutorisee(valeur) {
+    try {
+      const u = new URL(valeur);
+      return u.protocol === "https:" && !u.username && !u.password && !u.port &&
+             SERVICES_AUTORISES.has(u.hostname);
+    } catch (e) {
+      return false;
+    }
+  }
+  const demandee = params.get("cible");
+  const cible = window.LINX_CIBLE ||
+    (demandee && cibleAutorisee(demandee) ? demandee : CIBLE_PAR_DEFAUT);
 
   let base;
   try {
