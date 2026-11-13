@@ -41,7 +41,18 @@
   } catch (e) {
     base = new URL(CIBLE_PAR_DEFAUT);
   }
-  const urlSante = new URL("/healthz", base.origin).toString();
+  // RÉVEIL DE TOUTE LA CHAÎNE (12/11/2026). Un service mutualisé (Express, démonstration) ne suffit pas : son lien
+  // personnel interroge le Superadmin, qui s'endort lui aussi. `chaine=1` demande au service de ne répondre « prêt »
+  // qu'une fois le Superadmin éveillé (les autres services ignorent le paramètre) ; et on réveille le Superadmin EN
+  // PARALLÈLE dès l'ouverture de la page, pour que les deux démarrages se chevauchent au lieu de s'additionner.
+  const urlSante = new URL("/healthz", base.origin);
+  urlSante.searchParams.set("chaine", "1");
+  const mutualise = /-(mutualise|la-grace)\.onrender\.com$/.test(base.hostname);
+  if (mutualise) {
+    // Le service que les Linx mutualisés interrogent est `linx-suite` (LINX_SUPERADMIN_URL du Blueprint mutualisé), et
+    // NON `linx-superadmin` : la première version de ce réveil visait le mauvais service (13/11/2026).
+    fetch("https://linx-suite.onrender.com/healthz", { mode: "no-cors", cache: "no-store" }).catch(() => {});
+  }
 
   const msg = document.getElementById("linx-loader-msg");
   const bar = document.getElementById("linx-loader-bar");
@@ -58,6 +69,11 @@
   const PROGRES = [10, 35, 60, 80, 92];
 
   let annule = false;
+  let etapeServeur = null;   // ce que le service dit réveiller en ce moment (statut « reveil »)
+  // Au-delà de ce délai passé en « reveil », on redirige quand même : le service mutualisé sait lui-même attendre le
+  // Superadmin (30 s) et afficher sa page d'attente ; l'écran ne doit jamais retenir un lien plus longtemps qu'avant
+  // (13/11/2026 : une sonde défectueuse côté service restait « reveil » indéfiniment).
+  const ATTENTE_CHAINE_MAX = 45;
 
   function afficherEtape(secondesEcoulees) {
     for (const [seuil, texte] of ETAPES) {
@@ -65,6 +81,7 @@
     }
     const i = Math.min(Math.floor(secondesEcoulees / 4), PROGRES.length - 1);
     bar.style.width = PROGRES[i] + "%";
+    if (etapeServeur) msg.textContent = etapeServeur;
   }
 
   function redirigerVers(url) {
@@ -83,9 +100,12 @@
     // donc lire le VRAI corps JSON, et ne considérer le serveur prêt que
     // lorsque c'est bien LUI qui répond — jamais la page d'attente Render.
     try {
-      const rep = await fetch(urlSante, { cache: "no-store" });
+      const rep = await fetch(urlSante.toString(), { cache: "no-store" });
       const donnees = await rep.json();
-      return typeof donnees === "object" && donnees !== null && "status" in donnees;
+      if (typeof donnees !== "object" || donnees === null || !("status" in donnees)) return false;
+      // « reveil » : le service répond mais attend encore une autre pièce de la chaîne (le Superadmin).
+      etapeServeur = donnees.status === "reveil" ? (donnees.etape || "Réveil en cours") : null;
+      return donnees.status !== "reveil";
     } catch (e) {
       // Réponse non-JSON (page HTML de Render) ou requête refusée :
       // le serveur applicatif ne répond pas encore.
@@ -95,7 +115,7 @@
 
   async function attendreReveil() {
     const debut = Date.now();
-    const LIMITE_SECONDES = 90;
+    const LIMITE_SECONDES = 150;   // Lab + Superadmin + base : 90 s ne suffisaient pas à une chaîne entièrement endormie
 
     while (!annule) {
       const secondes = (Date.now() - debut) / 1000;
@@ -107,7 +127,7 @@
         return;
       }
 
-      if (await verifierUneFois()) {
+      if (await verifierUneFois() || (etapeServeur && secondes > ATTENTE_CHAINE_MAX)) {
         bar.style.width = "100%";
         msg.textContent = "Serveur prêt — redirection";
         setTimeout(() => redirigerVers(cible), 400);
